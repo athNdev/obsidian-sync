@@ -41,6 +41,7 @@ cp .env.example .env
 
 Update the following:
 - `TS_AUTHKEY`: Paste your Tailscale auth key
+- `COUCHDB_URL`: URL to the couchdb container
 - `COUCHDB_USER`: Set admin username (default: admin)
 - `COUCHDB_PASSWORD`: **Change to a strong password (20+ characters)**
 
@@ -49,12 +50,6 @@ Update the following:
 ```bash
 # Start all services
 docker compose up -d
-
-# Check status
-docker compose ps
-
-# View logs
-docker compose logs -f
 ```
 
 ### 4. Verify Tailscale Connection
@@ -133,69 +128,6 @@ docker run --rm \
 # Start CouchDB
 docker compose start couchdb
 ```
-
-## Maintenance
-
-### View Logs
-
-```bash
-# All services
-docker compose logs -f
-
-# Specific service
-docker compose logs -f couchdb
-docker compose logs -f tailscale
-docker compose logs -f backup
-```
-
-### Update Services
-
-```bash
-# Pull latest images
-docker compose pull
-
-# Recreate containers
-docker compose up -d
-```
-
-### Stop Services
-
-```bash
-# Stop all
-docker compose down
-
-# Stop and remove volumes (WARNING: deletes data)
-docker compose down -v
-```
-
-## Troubleshooting
-
-### CouchDB not accessible
-
-1. Check Tailscale is connected: `docker exec obsidian-tailscale tailscale status`
-2. Verify CouchDB is running: `docker compose ps`
-3. Check logs: `docker compose logs couchdb`
-
-### Obsidian-LiveSync connection fails
-
-1. Verify database URL uses Tailscale hostname (not `localhost`)
-2. Ensure device is connected to Tailscale network
-3. Test direct access: `curl http://<tailscale-hostname>:5984` (should return CouchDB version)
-4. Check CORS configuration in Fauxton UI
-
-### Backup not running
-
-1. Check backup container: `docker compose logs backup`
-2. Manually trigger: `docker exec obsidian-backup /backup.sh`
-3. Verify `./backups/` directory exists and is writable
-
-## Security Notes
-
-- Never expose CouchDB port (5984) to the public internet
-- Access is restricted to your Tailscale network only
-- Use strong passwords (20+ characters, mixed case, numbers, symbols)
-- Consider enabling Tailscale ACLs to restrict access further
-- Backups are stored unencrypted - secure the host filesystem appropriately
 
 ## Resources
 
