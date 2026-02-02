@@ -1,0 +1,62 @@
+services:
+  couchdb:
+    image: couchdb:3.3.3
+    container_name: obsidian-couchdb
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
+    volumes:
+      - ./data/couchdb:/opt/couchdb/data
+      - ./cors.ini:/opt/couchdb/etc/local.d/cors.ini:ro
+    networks:
+      - obsidian-net
+    restart: unless-stopped
+
+  tailscale:
+    image: tailscale/tailscale:stable
+    container_name: obsidian-tailscale
+    hostname: obsidian-sync
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - ./data/tailscale:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    networks:
+      - obsidian-net
+    command: sh -c "tailscaled --socket=/tmp/tailscaled.sock --statedir=/var/lib/tailscale --tun=userspace-networking & sleep 5 && tailscale --socket=/tmp/tailscaled.sock up --authkey=$${TS_AUTHKEY} --hostname=obsidian-sync && tailscale --socket=/tmp/tailscaled.sock serve --bg http://couchdb:5984 && sleep infinity"
+    restart: unless-stopped
+
+  backup:
+    image: alpine:latest
+    container_name: obsidian-backup
+    depends_on:
+      - couchdb
+    volumes:
+      - ./data/couchdb:/source:ro
+      - ./backups:/backups
+      - ./backup.sh:/scripts/backup.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache tar gzip
+        cp /scripts/backup.sh /usr/local/bin/backup.sh
+        chmod +x /usr/local/bin/backup.sh
+        mkdir -p /backups
+        echo "Backup container started. Will run backup daily at midnight."
+        while true; do
+          CURRENT_TIME=$$(date +%H:%M)
+          if [ "$$CURRENT_TIME" = "00:00" ]; then
+            echo "[$$(date)] Running scheduled backup..."
+            /usr/local/bin/backup.sh
+          fi
+          sleep 60
+        done
+    restart: unless-stopped
+
+networks:
+  obsidian-net:
+    driver: bridge
