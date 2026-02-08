@@ -7,7 +7,7 @@ services:
       - COUCHDB_PASSWORD=${COUCHDB_PASSWORD}
     volumes:
       - ./data/couchdb:/opt/couchdb/data
-      - ./cors.ini:/opt/couchdb/etc/local.d/cors.ini:ro
+      - ./cors.ini:/opt/couchdb/etc/local.d/cors.ini
     networks:
       - obsidian-net
     restart: unless-stopped
